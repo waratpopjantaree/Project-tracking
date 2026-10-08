@@ -96,58 +96,61 @@ if "current_menu" not in st.session_state:
   st.session_state.current_menu = "📊 Dashboard ภาพรวม"
 
 # -----------------------------------------
-# Sidebar: เมนูด้านข้างดีไซน์ใหม่ ขนาดใหญ่และสวยงาม
+# Sidebar: เมนูด้านข้างพร้อมรูปภาพตัวละครเท่ๆ
 # -----------------------------------------
-st.sidebar.markdown(
-    """
-    <div style="text-align: center; padding: 10px 0;">
-        <h2 style="color: #4A90E2; margin-bottom: 0px;">📹 CCTV OPS</h2>
-        <p style="color: #7F8C8D; font-size: 14px; margin-top: 5px;">Project Tracking System</p>
-    </div>
-""",
-    unsafe_allow_html=True,
-)
-st.sidebar.markdown("---")
+with st.sidebar:
+  # แสดงรูปภาพจากที่คุณส่งมา
+  st.image("https://files.catbox.moe/u85f8e.png", use_column_width=True)
+  
+  st.markdown(
+      """
+      <div style="text-align: center; padding: 5px 0 15px 0;">
+          <h3 style="color: #4A90E2; margin-bottom: 0px;">CCTV OPS</h3>
+          <p style="color: #7F8C8D; font-size: 13px; margin-top: 2px;">Project Tracking System</p>
+      </div>
+  """,
+      unsafe_allow_html=True,
+  )
+  st.markdown("---")
 
-st.sidebar.markdown(
-    """
-    <style>
-    /* ตกแต่งปุ่มเมนูใน Sidebar ให้ใหญ่และสวยงาม */
-    div.stButton > button {
-        width: 100%;
-        text-align: left;
-        font-size: 16px;
-        font-weight: bold;
-        padding: 12px 20px;
-        border-radius: 12px;
-        border: 1px solid #E0E0E0;
-        background-color: #F8F9F9;
-        color: #2C3E50;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        transition: all 0.3s ease;
-        margin-bottom: 8px;
-    }
-    div.stButton > button:hover {
-        background-color: #E8F8F5;
-        border-color: #A2D9CE;
-        color: #117A65;
-        transform: translateY(-2px);
-    }
-    </style>
-""",
-    unsafe_allow_html=True,
-)
+  st.markdown(
+      """
+      <style>
+      div.stButton > button {
+          width: 100%;
+          text-align: left;
+          font-size: 16px;
+          font-weight: bold;
+          padding: 12px 20px;
+          border-radius: 12px;
+          border: 1px solid #E0E0E0;
+          background-color: #F8F9F9;
+          color: #2C3E50;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+          transition: all 0.3s ease;
+          margin-bottom: 8px;
+      }
+      div.stButton > button:hover {
+          background-color: #E8F8F5;
+          border-color: #A2D9CE;
+          color: #117A65;
+          transform: translateY(-2px);
+      }
+      </style>
+  """,
+      unsafe_allow_html=True,
+  )
 
-st.sidebar.markdown("### 📌 เมนูหลักเลือกใช้งาน")
+  st.markdown("### 📌 เมนูหลักเลือกใช้งาน")
 
-if st.sidebar.button("📊  Dashboard ภาพรวม"):
-  st.session_state.current_menu = "📊 Dashboard ภาพรวม"
-if st.sidebar.button("📂  จัดการโครงการ"):
-  st.session_state.current_menu = "📂 จัดการโครงการ (เพิ่ม/ลด/แก้ไข)"
-if st.sidebar.button("📋  จัดการงานย่อย"):
-  st.session_state.current_menu = "📋 จัดการงานย่อย (เพิ่ม/ลด/แก้ไข)"
-if st.sidebar.button("⚠️  จัดการปัญหา"):
-  st.session_state.current_menu = "⚠️ จัดการปัญหา (เพิ่ม/ลด/แก้ไข)"
+  if st.button("📊  Dashboard ภาพรวม"):
+    st.session_state.current_menu = "📊 Dashboard ภาพรวม"
+  if st.button("📂  จัดการโครงการ"):
+    st.session_state.current_menu = "📂 จัดการโครงการ (เพิ่ม/ลด/แก้ไข)"
+  if st.button("📋  จัดการงานย่อย"):
+    st.session_state.current_menu = "📋 จัดการงานย่อย (เพิ่ม/ลด/แก้ไข)"
+  if st.button("⚠️  จัดการปัญหา"):
+    st.session_state.current_menu = "⚠️ จัดการปัญหา (เพิ่ม/ลด/แก้ไข)"
 
 menu = st.session_state.current_menu
 
