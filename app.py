@@ -10,8 +10,6 @@ st.set_page_config(page_title="Project Tracking", page_icon="📹", layout="wide
 # -------------------------
 # 🔌 เชื่อมต่อ Supabase
 # -------------------------
-# แนะนำให้เก็บค่าเหล่านี้ไว้ใน st.secrets ของ Streamlit Cloud เพื่อความปลอดภัย
-# (สร้างไฟล์ .streamlit/secrets.toml บน GitHub หรือใส่ใน App settings ของ Streamlit Cloud)
 SUPABASE_URL = st.secrets.get("SUPABASE_URL", "ใส่_URL_ของคุณที่นี่_ถ้ายังไม่ตั้งค่า Secrets")
 SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "ใส่_ANON_KEY_ของคุณที่นี่")
 
@@ -38,32 +36,30 @@ def show_success_toast(message="บันทึกสำเร็จ"):
   success_box.empty()
 
 # -------------------------
-# ฟังก์ชันดึงข้อมูลจาก Supabase
+# ฟังก์ชันดึงข้อมูลแบบปลอดภัย (มี Cache ป้องกัน 522 Timeout)
 # -------------------------
-def load_data():
+@st.cache_data(ttl=30, show_spinner=False)
+def fetch_table(table_name):
+  """ดึงข้อมูลจากตาราง พร้อมเก็บ Cache ไว้ 30 วินาที"""
   try:
-    res_p = supabase.table("projects").select("*").execute()
-    res_t = supabase.table("tasks").select("*").execute()
-    res_i = supabase.table("issues").select("*").execute()
-    
-    return (
-        res_p.data if res_p.data else [],
-        res_t.data if res_t.data else [],
-        res_i.data if res_i.data else []
-    )
+    res = supabase.table(table_name).select("*").execute()
+    return res.data if res.data else []
   except Exception as e:
-    st.error(f"เกิดข้อผิดพลาดในการดึงข้อมูล: {e}")
+    return None
+
+def safe_load_data():
+  """ฟังก์ชันกลางดึงข้อมูล 3 ตารางหลัก พร้อมรับมือกรณีเซิร์ฟเวอร์หลับ"""
+  p = fetch_table("projects")
+  t = fetch_table("tasks")
+  i = fetch_table("issues")
+  
+  if p is None or t is None or i is None:
+    st.warning("⚠️ เซิร์ฟเวอร์ Supabase ตอบสนองช้าหรือหลับอยู่ กรุณากดปุ่ม '🔄 โหลดข้อมูลใหม่' ด้านข้างเมนู")
     return [], [], []
+  return p, t, i
 
-# โหลดข้อมูลเก็บไว้ใน session_state หรือดึงใหม่สดๆ
-projects_data, tasks_data, issues_data = load_data()
-
-if "projects" not in st.session_state:
-  st.session_state.projects = projects_data
-if "tasks" not in st.session_state:
-  st.session_state.tasks = tasks_data
-if "issues" not in st.session_state:
-  st.session_state.issues = issues_data
+# โหลดข้อมูลเข้าแอป
+projects_data, tasks_data, issues_data = safe_load_data()
 
 # ตัวแปรสถานะสำหรับการแก้ไข
 if "edit_project_id" not in st.session_state:
@@ -119,6 +115,11 @@ with st.sidebar:
   if st.button("⚠️  จัดการปัญหา"):
     st.session_state.current_menu = "⚠️ จัดการปัญหา (เพิ่ม/ลด/แก้ไข)"
 
+  st.markdown("---")
+  if st.button("🔄 โหลดข้อมูลใหม่"):
+    st.cache_data.clear()
+    st.rerun()
+
 menu = st.session_state.current_menu
 
 # -------------------------
@@ -129,7 +130,7 @@ if menu == "📊 Dashboard ภาพรวม":
   st.markdown("##### ติดตามความคืบหน้า งบประมาณ และสถานะโครงการแบบเรียลไทม์ (Supabase DB)")
   st.write("")
 
-  df_p = pd.DataFrame(supabase.table("projects").select("*").execute().data)
+  df_p = pd.DataFrame(projects_data)
 
   if not df_p.empty:
     col1, col2, col3, col4 = st.columns(4)
@@ -137,8 +138,7 @@ if menu == "📊 Dashboard ภาพรวม":
     col2.metric("💰 งบประมาณรวม", f"{df_p['budget'].sum():,.0f} บาท")
     col3.metric("📈 ความคืบหน้าเฉลี่ย", f"{df_p['progress'].mean():.1f}%")
     
-    issues_res = supabase.table("issues").select("*").eq("status", "เปิด").execute()
-    open_issues = len(issues_res.data) if issues_res.data else 0
+    open_issues = len([i for i in issues_data if i.get("status") == "เปิด"])
     col4.metric("⚠️ ปัญหาที่ยังเปิด", f"{open_issues} เคส")
 
     st.markdown("---")
@@ -213,6 +213,7 @@ elif menu == "📂 จัดการโครงการ (เพิ่ม/ล�
               "progress": new_progress,
               "status": new_status,
           }).execute()
+          st.cache_data.clear()
           show_success_toast(f"บันทึกโครงการ {new_name} ลง Supabase สำเร็จ!")
           st.rerun()
         except Exception as e:
@@ -247,6 +248,7 @@ elif menu == "📂 จัดการโครงการ (เพิ่ม/ล�
                 "status": e_status
             }).eq("id", proj_obj["id"]).execute()
             st.session_state.edit_project_id = None
+            st.cache_data.clear()
             show_success_toast("อัปเดตข้อมูลใน Supabase สำเร็จ!")
             st.rerun()
 
@@ -256,9 +258,8 @@ elif menu == "📂 จัดการโครงการ (เพิ่ม/ล�
         st.markdown("---")
 
     st.subheader("📋 รายการโครงการทั้งหมด")
-    projects_list = supabase.table("projects").select("*").execute().data
-    if projects_list:
-      for row in projects_list:
+    if projects_data:
+      for row in projects_data:
         cols = st.columns([3, 2, 1, 1])
         cols[0].write(f"**{row['name']}**")
         cols[1].write(f"สถานะ: {row['status']}")
@@ -269,6 +270,7 @@ elif menu == "📂 จัดการโครงการ (เพิ่ม/ล�
           
         if cols[3].button("🗑️ ลบ", key=f"del_p_{row['id']}"):
           supabase.table("projects").delete().eq("id", row["id"]).execute()
+          st.cache_data.clear()
           show_success_toast("ลบโครงการจาก Supabase สำเร็จ!")
           st.rerun()
     else:
@@ -282,15 +284,14 @@ elif menu == "📋 จัดการงานย่อย (เพิ่ม/ล�
   st.markdown("##### เพิ่ม ลบ หรือคลิกแก้ไขสถานะและชื่องานย่อย")
   st.markdown("---")
 
-  projects_list = supabase.table("projects").select("*").execute().data
-  if not projects_list:
+  if not projects_data:
     st.warning("⚠️ กรุณาเพิ่มโครงการก่อนจัดการงานย่อย")
   else:
     tab_task_add, tab_task_edit_del = st.tabs(["➕ เพิ่มงานย่อยใหม่", "📋 รายการงานย่อยทั้งหมด"])
 
     with tab_add:
       with st.form("add_task"):
-        proj_map = {p["name"]: p["code"] for p in projects_list}
+        proj_map = {p["name"]: p["code"] for p in projects_data}
         sel_p_name = st.selectbox("เลือกชื่อโครงการหลัก", list(proj_map.keys()))
         t_proj = proj_map[sel_p_name]
 
@@ -304,6 +305,7 @@ elif menu == "📋 จัดการงานย่อย (เพิ่ม/ล�
               "task_name": t_name,
               "status": t_status
           }).execute()
+          st.cache_data.clear()
           show_success_toast("บันทึกงานย่อยลง Supabase สำเร็จ!")
           st.rerun()
 
@@ -314,7 +316,7 @@ elif menu == "📋 จัดการงานย่อย (เพิ่ม/ล�
           task_obj = res.data[0]
           st.markdown(f"### ✏️ แก้ไขงานย่อย: {task_obj['task_name']} (ID: {task_obj['id']})")
           with st.form("edit_task_form"):
-            proj_map = {p["name"]: p["code"] for p in projects_list}
+            proj_map = {p["name"]: p["code"] for p in projects_data}
             current_p_name = next((name for name, code in proj_map.items() if code == task_obj["project_code"]), list(proj_map.keys())[0])
             
             et_p_name = st.selectbox("เลือกชื่อโครงการหลัก", list(proj_map.keys()), index=list(proj_map.keys()).index(current_p_name) if current_p_name in list(proj_map.keys()) else 0)
@@ -337,6 +339,7 @@ elif menu == "📋 จัดการงานย่อย (เพิ่ม/ล�
                   "status": et_status
               }).eq("id", task_obj["id"]).execute()
               st.session_state.edit_task_id = None
+              st.cache_data.clear()
               show_success_toast("อัปเดตงานย่อยสำเร็จ!")
               st.rerun()
 
@@ -346,9 +349,8 @@ elif menu == "📋 จัดการงานย่อย (เพิ่ม/ล�
           st.markdown("---")
 
       st.subheader("📌 รายการงานย่อยทั้งหมด")
-      tasks_list = supabase.table("tasks").select("*").execute().data
-      if tasks_list:
-        for row in tasks_list:
+      if tasks_data:
+        for row in tasks_data:
           cols = st.columns([3, 2, 1, 1])
           cols[0].write(f"**{row['task_name']}**")
           cols[1].write(f"สถานะ: {row['status']}")
@@ -359,6 +361,7 @@ elif menu == "📋 จัดการงานย่อย (เพิ่ม/ล�
             
           if cols[3].button("🗑️ ลบ", key=f"del_t_{row['id']}"):
             supabase.table("tasks").delete().eq("id", row["id"]).execute()
+            st.cache_data.clear()
             show_success_toast("ลบงานย่อยสำเร็จ!")
             st.rerun()
       else:
@@ -372,15 +375,14 @@ elif menu == "⚠️ จัดการปัญหา (เพิ่ม/ลด/�
   st.markdown("##### บันทึก แก้ไข หรือปิดงานปัญหาที่พบหน้างาน")
   st.markdown("---")
 
-  projects_list = supabase.table("projects").select("*").execute().data
-  if not projects_list:
+  if not projects_data:
     st.warning("⚠️ กรุณาเพิ่มโครงการก่อนบันทึกปัญหา")
   else:
     tab_iss_add, tab_iss_edit_del = st.tabs(["➕ บันทึกปัญหาใหม่", "🚨 รายการปัญหาทั้งหมด"])
 
     with tab_iss_add:
       with st.form("add_issue"):
-        proj_map = {p["name"]: p["code"] for p in projects_list}
+        proj_map = {p["name"]: p["code"] for p in projects_data}
         sel_p_name = st.selectbox("เลือกชื่อโครงการที่พบปัญหา", list(proj_map.keys()))
         i_proj = proj_map[sel_p_name]
 
@@ -396,6 +398,7 @@ elif menu == "⚠️ จัดการปัญหา (เพิ่ม/ลด/�
               "severity": i_sev,
               "status": i_stat
           }).execute()
+          st.cache_data.clear()
           show_success_toast("บันทึกปัญหาลง Supabase สำเร็จ!")
           st.rerun()
 
@@ -406,7 +409,7 @@ elif menu == "⚠️ จัดการปัญหา (เพิ่ม/ลด/�
           issue_obj = res.data[0]
           st.markdown(f"### ✏️ แก้ไขปัญหา: {issue_obj['detail'][:30]}... (ID: {issue_obj['id']})")
           with st.form("edit_issue_form"):
-            proj_map = {p["name"]: p["code"] for p in projects_list}
+            proj_map = {p["name"]: p["code"] for p in projects_data}
             current_p_name = next((name for name, code in proj_map.items() if code == issue_obj["project_code"]), list(proj_map.keys())[0])
             
             ei_p_name = st.selectbox("เลือกชื่อโครงการ", list(proj_map.keys()), index=list(proj_map.keys()).index(current_p_name) if current_p_name in list(proj_map.keys()) else 0)
@@ -434,6 +437,7 @@ elif menu == "⚠️ จัดการปัญหา (เพิ่ม/ลด/�
                   "status": ei_status
               }).eq("id", issue_obj["id"]).execute()
               st.session_state.edit_issue_id = None
+              st.cache_data.clear()
               show_success_toast("อัปเดตปัญหาสำเร็จ!")
               st.rerun()
 
@@ -443,9 +447,8 @@ elif menu == "⚠️ จัดการปัญหา (เพิ่ม/ลด/�
           st.markdown("---")
 
       st.subheader("🚨 รายการปัญหาทั้งหมดในระบบ")
-      issues_list = supabase.table("issues").select("*").execute().data
-      if issues_list:
-        for row in issues_list:
+      if issues_data:
+        for row in issues_data:
           cols = st.columns([3, 2, 1, 1])
           cols[0].write(f"**{row['detail']}**")
           cols[1].write(f"สถานะ: {row['status']}")
@@ -456,6 +459,7 @@ elif menu == "⚠️ จัดการปัญหา (เพิ่ม/ลด/�
             
           if cols[3].button("🗑️ ลบ", key=f"del_i_{row['id']}"):
             supabase.table("issues").delete().eq("id", row["id"]).execute()
+            st.cache_data.clear()
             show_success_toast("ลบรายการปัญหาเรียบร้อย!")
             st.rerun()
       else:
