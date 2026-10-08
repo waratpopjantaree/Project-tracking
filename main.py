@@ -91,22 +91,65 @@ if "edit_task_id" not in st.session_state:
 if "edit_issue_id" not in st.session_state:
   st.session_state.edit_issue_id = None
 
+# เก็บสถานะหน้าปัจจุบันใน session_state เพื่อทำปุ่มเมนูขนาดใหญ่
+if "current_menu" not in st.session_state:
+  st.session_state.current_menu = "📊 Dashboard ภาพรวม"
+
 # -----------------------------------------
-# Sidebar: เมนูด้านข้างแบบแสดงผลตลอด (Radio)
+# Sidebar: เมนูด้านข้างดีไซน์ใหม่ ขนาดใหญ่และสวยงาม
 # -----------------------------------------
-st.sidebar.markdown("## 📹 PROJECT TRACKING")
-st.sidebar.caption("ระบบติดตามโครงการอัจฉริยะ")
+st.sidebar.markdown(
+    """
+    <div style="text-align: center; padding: 10px 0;">
+        <h2 style="color: #4A90E2; margin-bottom: 0px;">📹 CCTV OPS</h2>
+        <p style="color: #7F8C8D; font-size: 14px; margin-top: 5px;">Project Tracking System</p>
+    </div>
+""",
+    unsafe_allow_html=True,
+)
 st.sidebar.markdown("---")
 
-menu = st.sidebar.radio(
-    "📌 เมนูหลัก",
-    [
-        "📊 Dashboard ภาพรวม",
-        "📂 จัดการโครงการ (เพิ่ม/ลด/แก้ไข)",
-        "📋 จัดการงานย่อย (เพิ่ม/ลด/แก้ไข)",
-        "⚠️ จัดการปัญหา (เพิ่ม/ลด/แก้ไข)",
-    ],
+st.sidebar.markdown(
+    """
+    <style>
+    /* ตกแต่งปุ่มเมนูใน Sidebar ให้ใหญ่และสวยงาม */
+    div.stButton > button {
+        width: 100%;
+        text-align: left;
+        font-size: 16px;
+        font-weight: bold;
+        padding: 12px 20px;
+        border-radius: 12px;
+        border: 1px solid #E0E0E0;
+        background-color: #F8F9F9;
+        color: #2C3E50;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        transition: all 0.3s ease;
+        margin-bottom: 8px;
+    }
+    div.stButton > button:hover {
+        background-color: #E8F8F5;
+        border-color: #A2D9CE;
+        color: #117A65;
+        transform: translateY(-2px);
+    }
+    </style>
+""",
+    unsafe_allow_html=True,
 )
+
+st.sidebar.markdown("### 📌 เมนูหลักเลือกใช้งาน")
+
+if st.sidebar.button("📊  Dashboard ภาพรวม"):
+  st.session_state.current_menu = "📊 Dashboard ภาพรวม"
+if st.sidebar.button("📂  จัดการโครงการ"):
+  st.session_state.current_menu = "📂 จัดการโครงการ (เพิ่ม/ลด/แก้ไข)"
+if st.sidebar.button("📋  จัดการงานย่อย"):
+  st.session_state.current_menu = "📋 จัดการงานย่อย (เพิ่ม/ลด/แก้ไข)"
+if st.sidebar.button("⚠️  จัดการปัญหา"):
+  st.session_state.current_menu = "⚠️ จัดการปัญหา (เพิ่ม/ลด/แก้ไข)"
+
+menu = st.session_state.current_menu
 
 # -------------------------
 # 1. หน้า Dashboard ภาพรวม
@@ -203,7 +246,6 @@ elif menu == "📂 จัดการโครงการ (เพิ่ม/ล�
         st.rerun()
 
   with tab_edit_del:
-    # ฟอร์มแก้ไขโครงการ
     if st.session_state.edit_project_id is not None:
       proj_obj = next((p for p in st.session_state.projects if p["id"] == st.session_state.edit_project_id), None)
       if proj_obj:
