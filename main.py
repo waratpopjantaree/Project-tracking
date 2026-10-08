@@ -96,20 +96,9 @@ if "current_menu" not in st.session_state:
   st.session_state.current_menu = "📊 Dashboard ภาพรวม"
 
 # -----------------------------------------
-# Sidebar: เมนูด้านข้าง (นำรูปภาพออกและขยับเมนูขึ้นด้านบน)
+# Sidebar: เมนูด้านข้าง (เริ่มต้นด้วยปุ่มเมนูหลักทันที)
 # -----------------------------------------
 with st.sidebar:
-  st.markdown(
-      """
-      <div style="padding: 5px 0 10px 0;">
-          <h3 style="color: #4A90E2; margin-bottom: 0px;">📹 CCTV OPS</h3>
-          <p style="color: #7F8C8D; font-size: 13px; margin-top: 2px;">Project Tracking System</p>
-      </div>
-  """,
-      unsafe_allow_html=True,
-  )
-  st.markdown("---")
-
   st.markdown(
       """
       <style>
