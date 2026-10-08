@@ -1,3 +1,4 @@
+import time
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -9,6 +10,14 @@ st.set_page_config(page_title="Project Tracking", page_icon="📹", layout="wide
 # 🎨 โทนสีพาสเทลสบายตา
 # -------------------------
 PASTEL_COLORS = ["#A2D9CE", "#FAD7A0", "#85C1E9", "#F1948A", "#BB8FCE", "#85929E"]
+
+# -------------------------
+# ฟังก์ชันแสดงข้อความสำเร็จแบบจางหาย
+# -------------------------
+def show_success_toast(message="บันทึกสำเร็จ"):
+  success_box = st.success(f"✅ {message}")
+  time.sleep(2)
+  success_box.empty()
 
 # -------------------------
 # Initial Session State (ข้อมูลเริ่มต้น)
@@ -182,7 +191,7 @@ elif menu == "📂 จัดการโครงการ (เพิ่ม/ล�
             "progress": new_progress,
             "status": new_status,
         })
-        st.success(f"✅ เพิ่มโครงการ {new_name} สำเร็จ!")
+        show_success_toast(f"บันทึกโครงการ {new_name} สำเร็จ!")
         st.rerun()
 
   with tab_edit_del:
@@ -215,12 +224,12 @@ elif menu == "📂 จัดการโครงการ (เพิ่ม/ล�
             proj_obj["budget"] = e_budget
             proj_obj["progress"] = e_progress
             proj_obj["status"] = e_status
-            st.success("✅ อัปเดตข้อมูลโครงการสำเร็จ!")
+            show_success_toast("อัปเดตข้อมูลโครงการสำเร็จ!")
             st.rerun()
 
           if delete_btn:
             st.session_state.projects = [p for p in st.session_state.projects if p["code"] != selected_code]
-            st.warning(f"⚠️ ลบโครงการรหัส {selected_code} เรียบร้อยแล้ว")
+            show_success_toast(f"ลบโครงการรหัส {selected_code} สำเร็จ!")
             st.rerun()
     else:
       st.info("ยังไม่มีข้อมูลโครงการ")
@@ -251,7 +260,7 @@ elif menu == "📋 จัดการงานย่อย (เพิ่ม/ล�
           st.session_state.tasks.append(
               {"id": t_id, "project_code": t_proj, "task_name": t_name, "status": t_status}
           )
-          st.success("✅ เพิ่มงานย่อยสำเร็จ!")
+          show_success_toast("บันทึกงานย่อยสำเร็จ!")
           st.rerun()
 
     with tab_task_edit_del:
@@ -283,12 +292,12 @@ elif menu == "📋 จัดการงานย่อย (เพิ่ม/ล�
               task_obj["project_code"] = et_proj
               task_obj["task_name"] = et_name
               task_obj["status"] = et_status
-              st.success("✅ อัปเดตงานย่อยสำเร็จ!")
+              show_success_toast("อัปเดตงานย่อยสำเร็จ!")
               st.rerun()
 
             if t_delete:
               st.session_state.tasks = [t for t in st.session_state.tasks if t["id"] != sel_tid]
-              st.warning("✅ ลบงานย่อยสำเร็จ!")
+              show_success_toast("ลบงานย่อยสำเร็จ!")
               st.rerun()
       else:
         st.info("ยังไม่มีงานย่อยในระบบ")
@@ -324,7 +333,7 @@ elif menu == "⚠️ จัดการปัญหา (เพิ่ม/ลด/�
               "severity": i_sev,
               "status": i_stat,
           })
-          st.success("✅ บันทึกปัญหาเรียบร้อย!")
+          show_success_toast("บันทึกปัญหาสำเร็จ!")
           st.rerun()
 
     with tab_iss_edit_del:
@@ -361,12 +370,12 @@ elif menu == "⚠️ จัดการปัญหา (เพิ่ม/ลด/�
               issue_obj["detail"] = ei_detail
               issue_obj["severity"] = ei_sev
               issue_obj["status"] = ei_status
-              st.success("✅ อัปเดตปัญหาสำเร็จ!")
+              show_success_toast("อัปเดตปัญหาสำเร็จ!")
               st.rerun()
 
             if i_delete:
               st.session_state.issues = [i for i in st.session_state.issues if i["id"] != sel_iid]
-              st.warning("✅ ลบรายการปัญหาเรียบร้อย!")
+              show_success_toast("ลบรายการปัญหาเรียบร้อย!")
               st.rerun()
       else:
         st.info("🎉 ยอดเยี่ยม! ไม่มีปัญหาค้างคาในระบบตอนนี้")
