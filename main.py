@@ -174,7 +174,7 @@ elif menu == "📂 จัดการโครงการ (เพิ่ม/ล�
 
   with tab_add:
     with st.form("add_proj"):
-      new_code = st.text_input("รหัสโครงการ (เช่น CCTV-NEW-005)")
+      new_code = st.text_input("รหัสโครงการ / เลขที่สัญญา")
       new_name = st.text_input("ชื่อโครงการ")
       new_budget = st.number_input("งบประมาณ (บาท)", min_value=0, value=1000000)
       new_progress = st.slider("ความคืบหน้าเริ่มต้น (%)", 0, 100, 0)
@@ -201,12 +201,17 @@ elif menu == "📂 จัดการโครงการ (เพิ่ม/ล�
       st.dataframe(df_p, use_container_width=True)
 
       st.markdown("---")
-      selected_code = st.selectbox("เลือกโครงการที่ต้องการแก้ไขหรือลบ", df_p["code"].tolist())
+      # สร้าง Map สำหรับแสดงชื่อโครงการใน Selectbox
+      proj_options = {p["name"]: p["code"] for p in st.session_state.projects}
+      selected_name = st.selectbox("เลือกชื่อโครงการที่ต้องการแก้ไขหรือลบ", list(proj_options.keys()))
+      selected_code = proj_options[selected_name]
+      
       proj_obj = next((p for p in st.session_state.projects if p["code"] == selected_code), None)
 
       if proj_obj:
         with st.form("edit_proj_form"):
-          st.markdown(f"### ✏️ แก้ไขข้อมูล: {proj_obj['code']}")
+          st.markdown(f"### ✏️ แก้ไขข้อมูล: {proj_obj['name']}")
+          e_code = st.text_input("รหัสโครงการ / เลขที่สัญญา", value=proj_obj["code"])
           e_name = st.text_input("ชื่อโครงการ", value=proj_obj["name"])
           e_budget = st.number_input("งบประมาณ (บาท)", min_value=0, value=int(proj_obj["budget"]))
           e_progress = st.slider("ความคืบหน้า (%)", 0, 100, int(proj_obj["progress"]))
@@ -220,6 +225,7 @@ elif menu == "📂 จัดการโครงการ (เพิ่ม/ล�
           delete_btn = col_delete.form_submit_button("🗑️ ลบโครงการนี้")
 
           if update_btn:
+            proj_obj["code"] = e_code
             proj_obj["name"] = e_name
             proj_obj["budget"] = e_budget
             proj_obj["progress"] = e_progress
@@ -250,7 +256,11 @@ elif menu == "📋 จัดการงานย่อย (เพิ่ม/ล�
 
     with tab_task_add:
       with st.form("add_task"):
-        t_proj = st.selectbox("เลือกโครงการหลัก", df_p["code"].tolist())
+        # ใช้ชื่อโครงการแทนรหัสใน Selectbox
+        proj_map = {p["name"]: p["code"] for p in st.session_state.projects}
+        sel_p_name = st.selectbox("เลือกชื่อโครงการหลัก", list(proj_map.keys()))
+        t_proj = proj_map[sel_p_name]
+
         t_name = st.text_input("ชื่องานย่อย (เช่น เดินสาย Fiber, ติดตั้งกล้องจุด A)")
         t_status = st.selectbox("สถานะงาน", ["รอดำเนินการ", "กำลังดำเนินการ", "เสร็จสิ้น"])
         t_sub = st.form_submit_button("💾 บันทึกงานย่อย")
@@ -277,7 +287,13 @@ elif menu == "📋 จัดการงานย่อย (เพิ่ม/ล�
         if task_obj:
           with st.form("edit_task_form"):
             st.markdown(f"### ✏️ แก้ไขงานย่อย (ID: {task_obj['id']})")
-            et_proj = st.selectbox("เลือกโครงการหลัก", df_p["code"].tolist(), index=df_p["code"].tolist().index(task_obj["project_code"]) if task_obj["project_code"] in df_p["code"].tolist() else 0)
+            
+            proj_map = {p["name"]: p["code"] for p in st.session_state.projects}
+            current_p_name = next((name for name, code in proj_map.items() if code == task_obj["project_code"]), list(proj_map.keys())[0])
+            
+            et_p_name = st.selectbox("เลือกชื่อโครงการหลัก", list(proj_map.keys()), index=list(proj_map.keys()).index(current_p_name) if current_p_name in list(proj_map.keys()) else 0)
+            et_proj = proj_map[et_p_name]
+            
             et_name = st.text_input("ชื่องานย่อย", value=task_obj["task_name"])
             
             t_statuses = ["รอดำเนินการ", "กำลังดำเนินการ", "เสร็จสิ้น"]
@@ -318,7 +334,10 @@ elif menu == "⚠️ จัดการปัญหา (เพิ่ม/ลด/�
 
     with tab_iss_add:
       with st.form("add_issue"):
-        i_proj = st.selectbox("เลือกโครงการที่พบปัญหา", df_p["code"].tolist())
+        proj_map = {p["name"]: p["code"] for p in st.session_state.projects}
+        sel_p_name = st.selectbox("เลือกชื่อโครงการที่พบปัญหา", list(proj_map.keys()))
+        i_proj = proj_map[sel_p_name]
+
         i_detail = st.text_area("รายละเอียดปัญหาที่พบ")
         i_sev = st.selectbox("ระดับความรุนแรง", ["ต่ำ", "ปานกลาง", "สูง"])
         i_stat = st.selectbox("สถานะการจัดการ", ["เปิด", "ปิด (แก้ไขแล้ว)"])
@@ -350,7 +369,13 @@ elif menu == "⚠️ จัดการปัญหา (เพิ่ม/ลด/�
         if issue_obj:
           with st.form("edit_issue_form"):
             st.markdown(f"### ✏️ แก้ไขปัญหา (ID: {issue_obj['id']})")
-            ei_proj = st.selectbox("เลือกโครงการ", df_p["code"].tolist(), index=df_p["code"].tolist().index(issue_obj["project_code"]) if issue_obj["project_code"] in df_p["code"].tolist() else 0)
+            
+            proj_map = {p["name"]: p["code"] for p in st.session_state.projects}
+            current_p_name = next((name for name, code in proj_map.items() if code == issue_obj["project_code"]), list(proj_map.keys())[0])
+            
+            ei_p_name = st.selectbox("เลือกชื่อโครงการ", list(proj_map.keys()), index=list(proj_map.keys()).index(current_p_name) if current_p_name in list(proj_map.keys()) else 0)
+            ei_proj = proj_map[ei_p_name]
+            
             ei_detail = st.text_area("รายละเอียดปัญหา", value=issue_obj["detail"])
             
             severities = ["ต่ำ", "ปานกลาง", "สูง"]
