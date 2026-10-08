@@ -201,7 +201,6 @@ elif menu == "📂 จัดการโครงการ (เพิ่ม/ล�
       st.dataframe(df_p, use_container_width=True)
 
       st.markdown("---")
-      # สร้าง Map สำหรับแสดงชื่อโครงการใน Selectbox
       proj_options = {p["name"]: p["code"] for p in st.session_state.projects}
       selected_name = st.selectbox("เลือกชื่อโครงการที่ต้องการแก้ไขหรือลบ", list(proj_options.keys()))
       selected_code = proj_options[selected_name]
@@ -210,7 +209,7 @@ elif menu == "📂 จัดการโครงการ (เพิ่ม/ล�
 
       if proj_obj:
         with st.form("edit_proj_form"):
-          st.markdown(f"### ✏️ แก้ไขข้อมูล: {proj_obj['name']}")
+          st.markdown(f"### ✏️ แก้ไขโครงการ: {proj_obj['name']}")
           e_code = st.text_input("รหัสโครงการ / เลขที่สัญญา", value=proj_obj["code"])
           e_name = st.text_input("ชื่อโครงการ", value=proj_obj["name"])
           e_budget = st.number_input("งบประมาณ (บาท)", min_value=0, value=int(proj_obj["budget"]))
@@ -256,7 +255,6 @@ elif menu == "📋 จัดการงานย่อย (เพิ่ม/ล�
 
     with tab_task_add:
       with st.form("add_task"):
-        # ใช้ชื่อโครงการแทนรหัสใน Selectbox
         proj_map = {p["name"]: p["code"] for p in st.session_state.projects}
         sel_p_name = st.selectbox("เลือกชื่อโครงการหลัก", list(proj_map.keys()))
         t_proj = proj_map[sel_p_name]
@@ -277,16 +275,18 @@ elif menu == "📋 จัดการงานย่อย (เพิ่ม/ล�
       st.subheader("📌 รายการงานย่อยทั้งหมด")
       df_t = pd.DataFrame(st.session_state.tasks)
       if not df_t.empty:
-        st.dataframe(df_t, use_container_width=True)
+        # แสดงชื่องานย่อยในตัวเลือก selectbox เพื่อให้เลือกง่ายขึ้น
+        task_options = {f"ID {t['id']}: {t['task_name']}": t["id"] for t in st.session_state.tasks}
+        selected_task_label = st.selectbox("เลือกงานย่อยที่ต้องการแก้ไขหรือลบ", list(task_options.keys()))
+        sel_tid = task_options[selected_task_label]
 
-        st.markdown("---")
-        task_ids = df_t["id"].tolist()
-        sel_tid = st.selectbox("เลือก ID งานย่อยที่ต้องการแก้ไขหรือลบ", task_ids)
         task_obj = next((t for t in st.session_state.tasks if t["id"] == sel_tid), None)
 
         if task_obj:
+          st.markdown("---")
           with st.form("edit_task_form"):
-            st.markdown(f"### ✏️ แก้ไขงานย่อย (ID: {task_obj['id']})")
+            # หัวข้อเปลี่ยนตามชื่องานย่อยที่กำลังคลิกแก้ไข
+            st.markdown(f"### ✏️ แก้ไขงานย่อย: {task_obj['task_name']} (ID: {task_obj['id']})")
             
             proj_map = {p["name"]: p["code"] for p in st.session_state.projects}
             current_p_name = next((name for name, code in proj_map.items() if code == task_obj["project_code"]), list(proj_map.keys())[0])
@@ -359,16 +359,18 @@ elif menu == "⚠️ จัดการปัญหา (เพิ่ม/ลด/�
       st.subheader("🚨 รายการปัญหาทั้งหมดในระบบ")
       df_i = pd.DataFrame(st.session_state.issues)
       if not df_i.empty:
-        st.dataframe(df_i, use_container_width=True)
+        # แสดงรายละเอียดปัญหาในตัวเลือก selectbox เพื่อให้เลือกง่ายขึ้น
+        issue_options = {f"ID {i['id']}: {i['detail'][:30]}...": i["id"] for i in st.session_state.issues}
+        selected_issue_label = st.selectbox("เลือกปัญหาที่ต้องการแก้ไขหรือลบ", list(issue_options.keys()))
+        sel_iid = issue_options[selected_issue_label]
 
-        st.markdown("---")
-        issue_ids = df_i["id"].tolist()
-        sel_iid = st.selectbox("เลือก ID ปัญหาที่ต้องการแก้ไขหรือลบ", issue_ids)
         issue_obj = next((i for i in st.session_state.issues if i["id"] == sel_iid), None)
 
         if issue_obj:
+          st.markdown("---")
           with st.form("edit_issue_form"):
-            st.markdown(f"### ✏️ แก้ไขปัญหา (ID: {issue_obj['id']})")
+            # หัวข้อเปลี่ยนตามปัญหาที่กำลังคลิกแก้ไข
+            st.markdown(f"### ✏️ แก้ไขปัญหา: {issue_obj['detail'][:30]}... (ID: {issue_obj['id']})")
             
             proj_map = {p["name"]: p["code"] for p in st.session_state.projects}
             current_p_name = next((name for name, code in proj_map.items() if code == issue_obj["project_code"]), list(proj_map.keys())[0])
