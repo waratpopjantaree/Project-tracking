@@ -85,9 +85,9 @@ menu = st.sidebar.radio(
     "📌 เมนูหลัก",
     [
         "📊 Dashboard ภาพรวม",
-        "📂 จัดการโครงการ (เพิ่ม/ลด)",
-        "📋 จัดการงานย่อย (Sub-tasks)",
-        "⚠️ จัดการปัญหา (Issues)",
+        "📂 จัดการโครงการ (เพิ่ม/ลด/แก้ไข)",
+        "📋 จัดการงานย่อย (เพิ่ม/ลด/แก้ไข)",
+        "⚠️ จัดการปัญหา (เพิ่ม/ลด/แก้ไข)",
     ],
 )
 
@@ -102,7 +102,6 @@ if menu == "📊 Dashboard ภาพรวม":
   df_p = pd.DataFrame(st.session_state.projects)
 
   if not df_p.empty:
-    # ตัวเลขสรุป KPI (ตกแต่งกล่องสวยงาม)
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("📌 โครงการทั้งหมด", f"{len(df_p)} โครงการ")
     col2.metric("💰 งบประมาณรวม", f"{df_p['budget'].sum():,.0f} บาท")
@@ -112,7 +111,6 @@ if menu == "📊 Dashboard ภาพรวม":
 
     st.markdown("---")
 
-    # แถวแสดงกราฟพาสเทล
     g1, g2 = st.columns(2)
 
     with g1:
@@ -155,15 +153,17 @@ if menu == "📊 Dashboard ภาพรวม":
   else:
     st.info("ยังไม่มีข้อมูลโครงการ กรุณาเพิ่มโครงการในเมนูด้านข้าง")
 
-# -------------------------
-# 2. หน้าจัดการโครงการ (เพิ่ม/ลด)
-# -------------------------
-elif menu == "📂 จัดการโครงการ (เพิ่ม/ลด)":
+# ----------------------------------------------------
+# 2. หน้าจัดการโครงการ (เพิ่ม / ลบ / แก้ไข)
+# ----------------------------------------------------
+elif menu == "📂 จัดการโครงการ (เพิ่ม/ลด/แก้ไข)":
   st.title("📂 บริหารจัดการข้อมูลโครงการ")
-  st.markdown("##### เพิ่ม ลบ หรือตรวจสอบรายละเอียดของแต่ละโครงการ")
+  st.markdown("##### เพิ่ม ลบ หรือแก้ไขรายละเอียดของแต่ละโครงการ")
   st.markdown("---")
 
-  with st.expander("➕ คลิกเพื่อเพิ่มโครงการใหม่", expanded=False):
+  tab_add, tab_edit_del = st.tabs(["➕ เพิ่มโครงการใหม่", "✏️ / 🗑️ แก้ไขหรือลบโครงการ"])
+
+  with tab_add:
     with st.form("add_proj"):
       new_code = st.text_input("รหัสโครงการ (เช่น CCTV-NEW-005)")
       new_name = st.text_input("ชื่อโครงการ")
@@ -185,31 +185,61 @@ elif menu == "📂 จัดการโครงการ (เพิ่ม/ล�
         st.success(f"✅ เพิ่มโครงการ {new_name} สำเร็จ!")
         st.rerun()
 
-  st.subheader("📋 รายการโครงการทั้งหมดในระบบ")
-  df_p = pd.DataFrame(st.session_state.projects)
-  if not df_p.empty:
-    st.dataframe(df_p, use_container_width=True)
+  with tab_edit_del:
+    st.subheader("📋 รายการโครงการทั้งหมดในระบบ")
+    df_p = pd.DataFrame(st.session_state.projects)
+    if not df_p.empty:
+      st.dataframe(df_p, use_container_width=True)
 
-    st.markdown("#### 🗑️ ลบโครงการ")
-    del_code = st.selectbox("เลือกโครงการที่ต้องการลบ", df_p["code"].tolist())
-    if st.button("🗑️ ยืนยันการลบโครงการนี้", type="primary"):
-      st.session_state.projects = [p for p in st.session_state.projects if p["code"] != del_code]
-      st.warning(f"⚠️ ลบโครงการรหัส {del_code} เรียบร้อยแล้ว")
-      st.rerun()
+      st.markdown("---")
+      selected_code = st.selectbox("เลือกโครงการที่ต้องการแก้ไขหรือลบ", df_p["code"].tolist())
+      proj_obj = next((p for p in st.session_state.projects if p["code"] == selected_code), None)
 
-# -------------------------
-# 3. หน้าจัดการงานย่อย (Sub-tasks)
-# -------------------------
-elif menu == "📋 จัดการงานย่อย (Sub-tasks)":
+      if proj_obj:
+        with st.form("edit_proj_form"):
+          st.markdown(f"### ✏️ แก้ไขข้อมูล: {proj_obj['code']}")
+          e_name = st.text_input("ชื่อโครงการ", value=proj_obj["name"])
+          e_budget = st.number_input("งบประมาณ (บาท)", min_value=0, value=int(proj_obj["budget"]))
+          e_progress = st.slider("ความคืบหน้า (%)", 0, 100, int(proj_obj["progress"]))
+          
+          statuses = ["วางแผน", "กำลังดำเนินการ", "เสร็จสิ้น", "ล่าช้า"]
+          curr_idx = statuses.index(proj_obj["status"]) if proj_obj["status"] in statuses else 0
+          e_status = st.selectbox("สถานะโครงการ", statuses, index=curr_idx)
+
+          col_update, col_delete = st.columns(2)
+          update_btn = col_update.form_submit_button("💾 บันทึกการแก้ไข")
+          delete_btn = col_delete.form_submit_button("🗑️ ลบโครงการนี้")
+
+          if update_btn:
+            proj_obj["name"] = e_name
+            proj_obj["budget"] = e_budget
+            proj_obj["progress"] = e_progress
+            proj_obj["status"] = e_status
+            st.success("✅ อัปเดตข้อมูลโครงการสำเร็จ!")
+            st.rerun()
+
+          if delete_btn:
+            st.session_state.projects = [p for p in st.session_state.projects if p["code"] != selected_code]
+            st.warning(f"⚠️ ลบโครงการรหัส {selected_code} เรียบร้อยแล้ว")
+            st.rerun()
+    else:
+      st.info("ยังไม่มีข้อมูลโครงการ")
+
+# ----------------------------------------------------
+# 3. หน้าจัดการงานย่อย (เพิ่ม / ลบ / แก้ไข)
+# ----------------------------------------------------
+elif menu == "📋 จัดการงานย่อย (เพิ่ม/ลด/แก้ไข)":
   st.title("📋 จัดการงานย่อยในแต่ละโครงการ")
-  st.markdown("##### ติดตามงานย่อยและสถานะการดำเนินงานในแต่ละเฟส")
+  st.markdown("##### เพิ่ม ลบ หรือคลิกแก้ไขสถานะและชื่องานย่อย")
   st.markdown("---")
 
   df_p = pd.DataFrame(st.session_state.projects)
   if df_p.empty:
     st.warning("⚠️ กรุณาเพิ่มโครงการก่อนจัดการงานย่อย")
   else:
-    with st.expander("➕ คลิกเพื่อเพิ่มงานย่อยใหม่", expanded=False):
+    tab_task_add, tab_task_edit_del = st.tabs(["➕ เพิ่มงานย่อยใหม่", "✏️ / 🗑️ แก้ไขหรือลบงานย่อย"])
+
+    with tab_task_add:
       with st.form("add_task"):
         t_proj = st.selectbox("เลือกโครงการหลัก", df_p["code"].tolist())
         t_name = st.text_input("ชื่องานย่อย (เช่น เดินสาย Fiber, ติดตั้งกล้องจุด A)")
@@ -224,34 +254,60 @@ elif menu == "📋 จัดการงานย่อย (Sub-tasks)":
           st.success("✅ เพิ่มงานย่อยสำเร็จ!")
           st.rerun()
 
-    st.subheader("📌 รายการงานย่อยทั้งหมด")
-    df_t = pd.DataFrame(st.session_state.tasks)
-    if not df_t.empty:
-      st.dataframe(df_t, use_container_width=True)
+    with tab_task_edit_del:
+      st.subheader("📌 รายการงานย่อยทั้งหมด")
+      df_t = pd.DataFrame(st.session_state.tasks)
+      if not df_t.empty:
+        st.dataframe(df_t, use_container_width=True)
 
-      st.markdown("#### 🗑️ ลบงานย่อย")
-      t_ids = df_t["id"].tolist()
-      selected_tid = st.selectbox("เลือก ID งานย่อยที่ต้องการลบ", t_ids)
-      if st.button("🗑️ ยืนยันลบงานย่อยนี้", type="primary"):
-        st.session_state.tasks = [t for t in st.session_state.tasks if t["id"] != selected_tid]
-        st.success("✅ ลบงานย่อยสำเร็จ!")
-        st.rerun()
-    else:
-      st.info("ยังไม่มีงานย่อยในระบบ")
+        st.markdown("---")
+        task_ids = df_t["id"].tolist()
+        sel_tid = st.selectbox("เลือก ID งานย่อยที่ต้องการแก้ไขหรือลบ", task_ids)
+        task_obj = next((t for t in st.session_state.tasks if t["id"] == sel_tid), None)
 
-# -------------------------
-# 4. หน้าจัดการปัญหา (Issues)
-# -------------------------
-elif menu == "⚠️ จัดการปัญหา (Issues)":
+        if task_obj:
+          with st.form("edit_task_form"):
+            st.markdown(f"### ✏️ แก้ไขงานย่อย (ID: {task_obj['id']})")
+            et_proj = st.selectbox("เลือกโครงการหลัก", df_p["code"].tolist(), index=df_p["code"].tolist().index(task_obj["project_code"]) if task_obj["project_code"] in df_p["code"].tolist() else 0)
+            et_name = st.text_input("ชื่องานย่อย", value=task_obj["task_name"])
+            
+            t_statuses = ["รอดำเนินการ", "กำลังดำเนินการ", "เสร็จสิ้น"]
+            et_stat_idx = t_statuses.index(task_obj["status"]) if task_obj["status"] in t_statuses else 0
+            et_status = st.selectbox("สถานะงาน", t_statuses, index=et_stat_idx)
+
+            col_tu, col_td = st.columns(2)
+            t_update = col_tu.form_submit_button("💾 บันทึกการแก้ไขงานย่อย")
+            t_delete = col_td.form_submit_button("🗑️ ลบงานย่อยนี้")
+
+            if t_update:
+              task_obj["project_code"] = et_proj
+              task_obj["task_name"] = et_name
+              task_obj["status"] = et_status
+              st.success("✅ อัปเดตงานย่อยสำเร็จ!")
+              st.rerun()
+
+            if t_delete:
+              st.session_state.tasks = [t for t in st.session_state.tasks if t["id"] != sel_tid]
+              st.warning("✅ ลบงานย่อยสำเร็จ!")
+              st.rerun()
+      else:
+        st.info("ยังไม่มีงานย่อยในระบบ")
+
+# ----------------------------------------------------
+# 4. หน้าจัดการปัญหา (เพิ่ม / ลบ / แก้ไข)
+# ----------------------------------------------------
+elif menu == "⚠️ จัดการปัญหา (เพิ่ม/ลด/แก้ไข)":
   st.title("⚠️ ติดตามและจัดการปัญหาในโครงการ")
-  st.markdown("##### บันทึกอุปสรรคและปัญหาที่พบหน้างานเพื่อหาทางแก้ไข")
+  st.markdown("##### บันทึก แก้ไข หรือปิดงานปัญหาที่พบหน้างาน")
   st.markdown("---")
 
   df_p = pd.DataFrame(st.session_state.projects)
   if df_p.empty:
     st.warning("⚠️ กรุณาเพิ่มโครงการก่อนบันทึกปัญหา")
   else:
-    with st.expander("➕ คลิกเพื่อบันทึกปัญหาใหม่", expanded=False):
+    tab_iss_add, tab_iss_edit_del = st.tabs(["➕ บันทึกปัญหาใหม่", "✏️ / 🗑️ แก้ไขหรือลบปัญหา"])
+
+    with tab_iss_add:
       with st.form("add_issue"):
         i_proj = st.selectbox("เลือกโครงการที่พบปัญหา", df_p["code"].tolist())
         i_detail = st.text_area("รายละเอียดปัญหาที่พบ")
@@ -271,17 +327,46 @@ elif menu == "⚠️ จัดการปัญหา (Issues)":
           st.success("✅ บันทึกปัญหาเรียบร้อย!")
           st.rerun()
 
-    st.subheader("🚨 รายการปัญหาทั้งหมดในระบบ")
-    df_i = pd.DataFrame(st.session_state.issues)
-    if not df_i.empty:
-      st.dataframe(df_i, use_container_width=True)
+    with tab_iss_edit_del:
+      st.subheader("🚨 รายการปัญหาทั้งหมดในระบบ")
+      df_i = pd.DataFrame(st.session_state.issues)
+      if not df_i.empty:
+        st.dataframe(df_i, use_container_width=True)
 
-      st.markdown("#### 🗑️ ลบ/เคลียร์รายการปัญหา")
-      i_ids = df_i["id"].tolist()
-      sel_iid = st.selectbox("เลือก ID ปัญหาที่ต้องการลบ", i_ids)
-      if st.button("🗑️ ยืนยันลบปัญหานี้", type="primary"):
-        st.session_state.issues = [i for i in st.session_state.issues if i["id"] != sel_iid]
-        st.success("✅ ลบรายการปัญหาเรียบร้อย!")
-        st.rerun()
-    else:
-      st.info("🎉 ยอดเยี่ยม! ไม่มีปัญหาค้างคาในระบบตอนนี้")
+        st.markdown("---")
+        issue_ids = df_i["id"].tolist()
+        sel_iid = st.selectbox("เลือก ID ปัญหาที่ต้องการแก้ไขหรือลบ", issue_ids)
+        issue_obj = next((i for i in st.session_state.issues if i["id"] == sel_iid), None)
+
+        if issue_obj:
+          with st.form("edit_issue_form"):
+            st.markdown(f"### ✏️ แก้ไขปัญหา (ID: {issue_obj['id']})")
+            ei_proj = st.selectbox("เลือกโครงการ", df_p["code"].tolist(), index=df_p["code"].tolist().index(issue_obj["project_code"]) if issue_obj["project_code"] in df_p["code"].tolist() else 0)
+            ei_detail = st.text_area("รายละเอียดปัญหา", value=issue_obj["detail"])
+            
+            severities = ["ต่ำ", "ปานกลาง", "สูง"]
+            ei_sev_idx = severities.index(issue_obj["severity"]) if issue_obj["severity"] in severities else 0
+            ei_sev = st.selectbox("ระดับความรุนแรง", severities, index=ei_sev_idx)
+
+            i_statuses = ["เปิด", "ปิด (แก้ไขแล้ว)"]
+            ei_stat_idx = i_statuses.index(issue_obj["status"]) if issue_obj["status"] in i_statuses else 0
+            ei_status = st.selectbox("สถานะการจัดการ", i_statuses, index=ei_stat_idx)
+
+            col_iu, col_id = st.columns(2)
+            i_update = col_iu.form_submit_button("💾 บันทึกการแก้ไขปัญหา")
+            i_delete = col_id.form_submit_button("🗑️ ลบปัญหานี้")
+
+            if i_update:
+              issue_obj["project_code"] = ei_proj
+              issue_obj["detail"] = ei_detail
+              issue_obj["severity"] = ei_sev
+              issue_obj["status"] = ei_status
+              st.success("✅ อัปเดตปัญหาสำเร็จ!")
+              st.rerun()
+
+            if i_delete:
+              st.session_state.issues = [i for i in st.session_state.issues if i["id"] != sel_iid]
+              st.warning("✅ ลบรายการปัญหาเรียบร้อย!")
+              st.rerun()
+      else:
+        st.info("🎉 ยอดเยี่ยม! ไม่มีปัญหาค้างคาในระบบตอนนี้")
