@@ -96,16 +96,13 @@ if "current_menu" not in st.session_state:
   st.session_state.current_menu = "📊 Dashboard ภาพรวม"
 
 # -----------------------------------------
-# Sidebar: เมนูด้านข้างพร้อมรูปภาพตัวละครเท่ๆ
+# Sidebar: เมนูด้านข้าง (นำรูปภาพออกและขยับเมนูขึ้นด้านบน)
 # -----------------------------------------
 with st.sidebar:
-  # แสดงรูปภาพจากที่คุณส่งมา
-  st.image("https://files.catbox.moe/u85f8e.png", use_column_width=True)
-  
   st.markdown(
       """
-      <div style="text-align: center; padding: 5px 0 15px 0;">
-          <h3 style="color: #4A90E2; margin-bottom: 0px;">CCTV OPS</h3>
+      <div style="padding: 5px 0 10px 0;">
+          <h3 style="color: #4A90E2; margin-bottom: 0px;">📹 CCTV OPS</h3>
           <p style="color: #7F8C8D; font-size: 13px; margin-top: 2px;">Project Tracking System</p>
       </div>
   """,
